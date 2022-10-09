@@ -1,0 +1,44 @@
+# Directory
+log_dir: logs
+output_dir: outputs
+save_dir: models
+
+# Experiment
+log_interval: 10
+num_eval_episodes: 100
+
+# Environment
+distribution_mode: easy
+num_levels: 200
+start_level: 0
+num_env_steps: 2.5e+7
+normalize_reward: True
+
+# Rollout
+num_processes: 64
+num_steps: 256
+
+# Policy gradient
+gamma: 0.999
+gae_lambda: 0.95
+
+# Actor-Critic
+actor_critic_class: DAACModel
+actor_critic_params:
+  shared: False
+
+# Agent
+agent_class: DAAC
+agent_params:
+  # PPO params
+  clip_param: 0.2
+  ppo_epoch: 1
+  num_mini_batch: 8
+  entropy_coef: 0.01
+  lr: 5.0e-4
+  eps: 1.0e-5
+  max_grad_norm: 0.5
+  # Aux params
+  value_epoch: 9
+  value_freq: 1
+  adv_loss_coef: 0.25
