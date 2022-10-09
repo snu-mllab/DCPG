@@ -74,8 +74,7 @@ python train.py --exp_name [CONFIG_NAME] --env_name [EVN_NAME]
 Please cite this work using the following bibtex entry.
 
 ```
-@inproceedings{
-    moon2022dcpg,
+@inproceedings{moon2022dcpg,
     title={Rethinking Value Function Learning for Generalization in Reinforcement Learning},
     author={Seungyong Moon and JunYoung Lee and Hyun Oh Song},
     booktitle={Neural Information Processing Systems},
