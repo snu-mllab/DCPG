@@ -7,6 +7,7 @@ This is the code for reproducing the results of the paper "Rethinking Value Func
 ## Installation
 
 To install all required dependencies, please run the following commands in the project root directory.
+
 ```
 conda create —name procgen python=3.8
 conda activate procgen
@@ -62,7 +63,11 @@ DDCPG (ours)
 python train.py --exp_name ddcpg --env_name [EVN_NAME]
 ```
 
-If you want to change hyperparemeters or experimental settings of each algorithm, please edit the corresponding config file in the directory named `configs`.
+You can find the corresponding config file for each experiment in the directory named `configs`. If you want to customize experiments, please create new config files in the directory and run the following command.
+
+```
+python train.py --exp_name [CONFIG_NAME] --env_name [EVN_NAME]
+```
 
 ## Citation
 
