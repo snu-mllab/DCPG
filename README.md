@@ -1,5 +1,7 @@
 # Rethinking Value Function Learning for Generalization in Reinforcement Learning
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/snu-mllab/DCPG/blob/main/LICENSE)
+
 This is the code for reproducing the results of the paper "Rethinking Value Function Learning for Generalization in Reinforcement Learning" accepted at NeurIPS 2022.
 
 ## Installation
@@ -66,6 +68,7 @@ If you want to change hyperparemeters or experimental settings of each algorithm
 
 Please cite this work using the following bibtex entry.
 
+```
 @inproceedings{
     moon2022dcpg,
     title={Rethinking Value Function Learning for Generalization in Reinforcement Learning},
@@ -73,6 +76,7 @@ Please cite this work using the following bibtex entry.
     booktitle={Neural Information Processing Systems},
     year={2022}
 }
+```
 
 ## Acknowledgement
 
