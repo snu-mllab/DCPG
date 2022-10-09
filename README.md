@@ -4,12 +4,13 @@ This is the code for reproducing the results of the paper "Rethinking Value Func
 
 ## Installation
 
-To install all required dependencies, please run the following commands.
+To install all required dependencies, please run the following commands in the project root directory.
 ```
 conda create —name procgen python=3.8
-conda install pytorch cudatoolkit=11.3 -c pytorch
+conda activate procgen
+conda install pytorch=1.11.0 cudatoolkit=11.3 -c pytorch
 
-pip install tensorflow==2.9.1
+pip install tensorflow==2.9.0
 pip install procgen
 pip install pyyaml
 pip install -e .
@@ -19,7 +20,13 @@ cd baselines
 pip install -e .
 ```
 
-If your GPU does not support CUDA 11.2 or later, please downgrade the versions of PyTorch and TensorFlow.
+If your GPU driver does not support CUDA 11.2 or later, please downgrade CUDA toolkit for PyTorch and TensorFlow.
+Here are the recommended versions for CUDA 10.2.
+
+```
+conda install pytorch=1.11.0 cudatoolkit=10.2 -c pytorch
+pip install tensorflow==2.3.0
+```
 
 ## Usage
 
