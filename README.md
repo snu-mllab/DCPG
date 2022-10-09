@@ -63,7 +63,7 @@ DDCPG (ours)
 python train.py --exp_name ddcpg --env_name [EVN_NAME]
 ```
 
-You can find the corresponding config file for each experiment in the directory named `configs`. If you want to customize experiments, please create new config files in the directory and run the following command.
+You can find the corresponding config file for each experiment in the directory named `configs`. If you want to customize an experiment, please create a new config file named `[CONFIG_NAME].yaml` in the directory and run the following command.
 
 ```
 python train.py --exp_name [CONFIG_NAME] --env_name [EVN_NAME]
