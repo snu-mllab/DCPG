@@ -1,7 +1,20 @@
+from typing import List
+
 import torch
 
+from dcpg.envs import VecPyTorchProcgen
+from dcpg.models import PPOModel
+from dcpg.storages import RolloutStorage
 
-def sample_episodes(envs, rollouts, actor_critic):
+
+def sample_episodes(
+    envs: VecPyTorchProcgen, 
+    rollouts: RolloutStorage, 
+    actor_critic: PPOModel,
+) -> List[float]:
+    """
+    Sample episodes
+    """
     episode_rewards = []
 
     # Sample episodes

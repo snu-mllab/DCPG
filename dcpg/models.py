@@ -161,7 +161,7 @@ class ResNetEncoder(nn.Module):
 
         apply_init_(self.modules())
 
-    def _make_layer(self, in_channels: int, out_channels: int) -> nn.Module:
+    def _make_layer(self, in_channels: int, out_channels: int) -> nn.Sequential:
         layers = []
 
         layers.append(Conv2d_tf(in_channels, out_channels, kernel_size=3, stride=1))
@@ -365,7 +365,9 @@ class DAACModel(PPOModel):
         )
 
     def forward(
-        self, obs: Tensor, actions: Optional[Tensor] = None
+        self, 
+        obs: Tensor, 
+        actions: Optional[Tensor] = None,
     ) -> Tuple[Dict[str, Union[Tensor, FixedCategorical]], Dict[str, Tensor]]:
         """
         Forward
