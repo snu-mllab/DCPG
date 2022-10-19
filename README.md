@@ -2,7 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/snu-mllab/DCPG/blob/main/LICENSE)
 
-This is the code for reproducing the results of the paper "Rethinking Value Function Learning for Generalization in Reinforcement Learning" accepted at NeurIPS 2022.
+This is the code for reproducing the results of the paper [Rethinking Value Function Learning for Generalization in Reinforcement Learning](http://arxiv.org/abs/2210.09960)
+accepted at NeurIPS 2022.
 
 ## Installation
 

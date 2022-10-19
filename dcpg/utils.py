@@ -1,17 +1,12 @@
-import glob
-import os
+import torch.nn as nn
+from typing import Union
 
-
-def init(module, weight_init, bias_init, gain=1):
+def init(
+    module: Union[nn.Linear, nn.Conv2d], 
+    weight_init: nn.init, 
+    bias_init: nn.init, 
+    gain: float = 1.0,
+):
     weight_init(module.weight.data, gain=gain)
     bias_init(module.bias.data)
     return module
-
-
-def cleanup_log_dir(log_dir):
-    try:
-        os.makedirs(log_dir)
-    except OSError:
-        files = glob.glob(os.path.join(log_dir, "*.monitor.csv"))
-        for f in files:
-            os.remove(f)

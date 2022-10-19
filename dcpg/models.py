@@ -1,11 +1,18 @@
+from typing import Dict, Optional, Sequence, Tuple, Union
+
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 
-from dcpg.distributions import Categorical
+from dcpg.distributions import Categorical, FixedCategorical
 from dcpg.utils import init
 
-init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0))
+init_ = lambda m: init(
+    m,
+    nn.init.orthogonal_,
+    lambda x: nn.init.constant_(x, 0),
+)
 
 init_relu_ = lambda m: init(
     m,
@@ -15,7 +22,7 @@ init_relu_ = lambda m: init(
 )
 
 
-def apply_init_(modules):
+def apply_init_(modules: Sequence[nn.Module]):
     """
     Initialize modules
     """
@@ -35,7 +42,7 @@ class Flatten(nn.Module):
     Flatten a tensor
     """
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return x.reshape(x.size(0), -1)
 
 
@@ -48,19 +55,18 @@ class Conv2d_tf(nn.Conv2d):
         super().__init__(*args, **kwargs)
         self.padding = kwargs.get("padding", "SAME")
 
-    def _compute_padding(self, input, dim):
+    def _compute_padding(self, input: Tensor, dim: int) -> Tuple[int, int]:
         input_size = input.size(dim + 2)
         filter_size = self.weight.size(dim + 2)
         effective_filter_size = (filter_size - 1) * self.dilation[dim] + 1
         out_size = (input_size + self.stride[dim] - 1) // self.stride[dim]
-        total_padding = max(
-            0, (out_size - 1) * self.stride[dim] + effective_filter_size - input_size
-        )
+        needed_input = (out_size - 1) * self.stride[dim] + effective_filter_size
+        total_padding = max(0, needed_input - input_size)
         additional_padding = int(total_padding % 2 != 0)
 
         return additional_padding, total_padding
 
-    def forward(self, input):
+    def forward(self, input: Tensor) -> Tensor:
         if self.padding == "VALID":
             return F.conv2d(
                 input,
@@ -92,19 +98,27 @@ class BasicBlock(nn.Module):
     Residual Network Block
     """
 
-    def __init__(self, n_channels):
+    def __init__(self, n_channels: int):
         super().__init__()
         self.conv1 = Conv2d_tf(
-            n_channels, n_channels, kernel_size=3, stride=1, padding=(1, 1)
+            n_channels,
+            n_channels,
+            kernel_size=3,
+            stride=1,
+            padding=(1, 1),
         )
         self.relu = nn.ReLU()
         self.conv2 = Conv2d_tf(
-            n_channels, n_channels, kernel_size=3, stride=1, padding=(1, 1)
+            n_channels,
+            n_channels,
+            kernel_size=3,
+            stride=1,
+            padding=(1, 1),
         )
 
         apply_init_(self.modules())
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         identity = x
 
         out = self.relu(x)
@@ -122,13 +136,24 @@ class ResNetEncoder(nn.Module):
     Residual Network Encoder
     """
 
-    def __init__(self, obs_shape, feature_dim=256, channels=[16, 32, 32], widen_factor=1):
+    def __init__(
+        self,
+        obs_shape: Sequence[int],
+        feature_dim: int = 256,
+        channels: Sequence[int] = [16, 32, 32],
+        widen_factor: int = 1,
+    ):
         super().__init__()
+
+        # Layer
         self.feature_dim = feature_dim
 
-        self.layer1 = self._make_layer(obs_shape[0], widen_factor * channels[0])
-        self.layer2 = self._make_layer(widen_factor * channels[0], widen_factor * channels[1])
-        self.layer3 = self._make_layer(widen_factor * channels[1], widen_factor * channels[2])
+        self.layers = nn.ModuleList()
+        in_channel = obs_shape[0]
+        for channel in channels:
+            out_channel = widen_factor * channel
+            self.layers.append(self._make_layer(in_channel, out_channel))
+            in_channel = out_channel
 
         self.flatten = Flatten()
         self.relu = nn.ReLU()
@@ -136,7 +161,7 @@ class ResNetEncoder(nn.Module):
 
         apply_init_(self.modules())
 
-    def _make_layer(self, in_channels, out_channels):
+    def _make_layer(self, in_channels: int, out_channels: int) -> nn.Module:
         layers = []
 
         layers.append(Conv2d_tf(in_channels, out_channels, kernel_size=3, stride=1))
@@ -147,10 +172,9 @@ class ResNetEncoder(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
+    def forward(self, x: Tensor) -> Tensor:
+        for layer in self.layers:
+            x = layer(x)
 
         x = self.flatten(x)
         x = self.relu(x)
@@ -165,7 +189,13 @@ class PPOModel(nn.Module):
     PPO Actor-Critic Model
     """
 
-    def __init__(self, obs_shape, num_actions, shared=True, **kwargs):
+    def __init__(
+        self,
+        obs_shape: Sequence[int],
+        num_actions: int,
+        shared: bool = True,
+        **kwargs,
+    ):
         super().__init__()
 
         # Encoder
@@ -187,7 +217,14 @@ class PPOModel(nn.Module):
         self.critic_heads = nn.ModuleDict()
         self.critic_heads["value"] = init_(nn.Linear(self.critic_feature_dim, 1))
 
-    def act(self, obs, deterministic=False):
+    def act(
+        self,
+        obs: Tensor,
+        deterministic: bool = False,
+    ) -> Union[Tensor, Tensor, Tensor]:
+        """
+        Sample actions
+        """
         # Forward obs
         actor_outputs, critic_outputs = self.forward(obs)
 
@@ -201,7 +238,13 @@ class PPOModel(nn.Module):
 
         return actions, action_log_probs, values
 
-    def forward(self, obs):
+    def forward(
+        self,
+        obs: Tensor,
+    ) -> Tuple[Dict[str, Union[Tensor, FixedCategorical]], Dict[str, Tensor]]:
+        """
+        Forward
+        """
         # Encoder
         features = dict()
         for key in self.true_keys:
@@ -221,7 +264,10 @@ class PPOModel(nn.Module):
 
         return actor_outputs, critic_outputs
 
-    def forward_actor(self, obs):
+    def forward_actor(self, obs: Tensor) -> Dict[str, Union[Tensor, FixedCategorical]]:
+        """
+        Forward actor
+        """
         # Encoder
         actor_features = self.encoders[self.actor_key](obs)
 
@@ -232,7 +278,10 @@ class PPOModel(nn.Module):
 
         return actor_outputs
 
-    def forward_critic(self, obs):
+    def forward_critic(self, obs: Tensor) -> Dict[str, Tensor]:
+        """
+        Forward critic
+        """
         # Encoder
         critic_features = self.encoders[self.critic_key](obs)
 
@@ -243,13 +292,22 @@ class PPOModel(nn.Module):
 
         return critic_outputs
 
-    def forward_actor_heads(self, actor_features):
+    def forward_actor_heads(
+        self,
+        actor_features: Tensor,
+    ) -> Dict[str, Union[Tensor, FixedCategorical]]:
+        """
+        Forward policy head
+        """
         actor_head_outputs = dict()
         actor_head_outputs["dist"] = self.actor_heads["dist"](actor_features)
 
         return actor_head_outputs
 
-    def forward_critic_heads(self, critic_features):
+    def forward_critic_heads(self, critic_features: Tensor) -> Dict[str, Tensor]:
+        """
+        Forward value head
+        """
         critic_head_outputs = dict()
         critic_head_outputs["value"] = self.critic_heads["value"](critic_features)
 
@@ -261,13 +319,25 @@ class PPGModel(PPOModel):
     PPG Actor-Critic Model
     """
 
-    def __init__(self, obs_shape, num_actions, shared=False, **kwargs):
+    def __init__(
+        self,
+        obs_shape: Sequence[int],
+        num_actions: int,
+        shared: bool = False,
+        **kwargs,
+    ):
         super().__init__(obs_shape, num_actions, shared, **kwargs)
 
         # Actor
         self.actor_heads["aux_value"] = init_(nn.Linear(self.actor_feature_dim, 1))
 
-    def forward_actor_heads(self, actor_features):
+    def forward_actor_heads(
+        self,
+        actor_features: Tensor,
+    ) -> Dict[str, Union[Tensor, FixedCategorical]]:
+        """
+        Forward policy head + aux value head
+        """
         actor_head_outputs = super().forward_actor_heads(actor_features)
         actor_head_outputs["aux_value"] = self.actor_heads["aux_value"](actor_features)
 
@@ -279,7 +349,13 @@ class DAACModel(PPOModel):
     DAAC Actor-Critic Model
     """
 
-    def __init__(self, obs_shape, num_actions, shared=False, **kwargs):
+    def __init__(
+        self,
+        obs_shape: Sequence[int],
+        num_actions: int,
+        shared: bool = False,
+        **kwargs,
+    ):
         super().__init__(obs_shape, num_actions, shared, **kwargs)
         self.num_actions = num_actions
 
@@ -288,11 +364,12 @@ class DAACModel(PPOModel):
             nn.Linear(self.actor_feature_dim + num_actions, 1)
         )
 
-    def concat_sa(self, features, actions):
-        onehot_actions = F.one_hot(actions.squeeze(dim=-1), self.num_actions).float()
-        return torch.cat([features, onehot_actions], dim=-1)
-
-    def forward(self, obs, actions=None):
+    def forward(
+        self, obs: Tensor, actions: Optional[Tensor] = None
+    ) -> Tuple[Dict[str, Union[Tensor, FixedCategorical]], Dict[str, Tensor]]:
+        """
+        Forward
+        """
         # Encoder
         features = dict()
         for key in self.true_keys:
@@ -312,7 +389,21 @@ class DAACModel(PPOModel):
 
         return actor_outputs, critic_outputs
 
-    def forward_actor(self, obs, actions=None):
+    def concat_sa(self, features: Tensor, actions: Tensor) -> Tensor:
+        """
+        Concatenate (s, a)
+        """
+        onehot_actions = F.one_hot(actions.squeeze(dim=-1), self.num_actions).float()
+        return torch.cat([features, onehot_actions], dim=-1)
+
+    def forward_actor(
+        self,
+        obs: Tensor,
+        actions: Optional[Tensor] = None,
+    ) -> Dict[str, Union[Tensor, FixedCategorical]]:
+        """
+        Forward actor
+        """
         # Encoder
         actor_features = self.encoders[self.actor_key](obs)
 
@@ -323,13 +414,19 @@ class DAACModel(PPOModel):
 
         return actor_outputs
 
-    def forward_actor_heads(self, actor_features, actions):
+    def forward_actor_heads(
+        self,
+        actor_features: Tensor,
+        actions: Tensor,
+    ) -> Dict[str, Union[Tensor, FixedCategorical]]:
+        """
+        Forward policy head + adv head
+        """
         actor_head_outputs = super().forward_actor_heads(actor_features)
         if actions is None:
             actions = actor_head_outputs["dist"].sample()
-        actor_head_outputs["adv"] = self.actor_heads["adv"](
-            self.concat_sa(actor_features, actions)
-        )
+        inputs_cat = self.concat_sa(actor_features, actions)
+        actor_head_outputs["adv"] = self.actor_heads["adv"](inputs_cat)
 
         return actor_head_outputs
 
@@ -339,7 +436,13 @@ class PPODynaModel(PPOModel):
     PPO + Dynamics Model
     """
 
-    def __init__(self, obs_shape, num_actions, shared=True, **kwargs):
+    def __init__(
+        self,
+        obs_shape: Sequence[int],
+        num_actions: int,
+        shared: bool = True,
+        **kwargs,
+    ):
         super().__init__(obs_shape, num_actions, shared, **kwargs)
         self.num_actions = num_actions
 
@@ -352,10 +455,27 @@ class PPODynaModel(PPOModel):
             init_(nn.Linear(256, 1)),
         )
 
-    def concat_sas(self, features, actions, next_features):
+    def concat_sas(
+        self,
+        features: Tensor,
+        actions: Tensor,
+        next_features: Tensor,
+    ) -> Tensor:
+        """
+        Concatenate (s, a, s')
+        """
         onehot_actions = F.one_hot(actions.squeeze(dim=-1), self.num_actions).float()
         return torch.cat([features, onehot_actions, next_features], dim=-1)
 
-    def forward_dyna(self, features, actions, next_features):
-        dyna_logits = self.dyna_layer(self.concat_sas(features, actions, next_features))
+    def forward_dyna(
+        self,
+        features: Tensor,
+        actions: Tensor,
+        next_features: Tensor,
+    ) -> Tensor:
+        """
+        Forward dynamics head
+        """
+        inputs_cat = self.concat_sas(features, actions, next_features)
+        dyna_logits = self.dyna_layer(inputs_cat)
         return dyna_logits
