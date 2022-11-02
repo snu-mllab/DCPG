@@ -8,8 +8,8 @@ from dcpg.storages import RolloutStorage
 
 
 def sample_episodes(
-    envs: VecPyTorchProcgen, 
-    rollouts: RolloutStorage, 
+    envs: VecPyTorchProcgen,
+    rollouts: RolloutStorage,
     actor_critic: PPOModel,
 ) -> List[float]:
     """

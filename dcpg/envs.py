@@ -1,3 +1,6 @@
+from typing import Dict, Union
+
+from numpy import ndarray
 import torch
 from torch import device, Tensor
 
@@ -49,7 +52,7 @@ class VecPyTorchProcgen(VecEnvWrapper):
         reward = torch.from_numpy(reward).unsqueeze(dim=1).float()
         return obs, reward, done, info
 
-    def normalization_infos(self):
+    def normalization_infos(self) -> Dict[str, Union[float, ndarray]]:
         var = self.venv.ret_rms.var
         eps = self.venv.epsilon
         cliprew = self.venv.cliprew

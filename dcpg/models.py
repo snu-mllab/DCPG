@@ -365,8 +365,8 @@ class DAACModel(PPOModel):
         )
 
     def forward(
-        self, 
-        obs: Tensor, 
+        self,
+        obs: Tensor,
         actions: Optional[Tensor] = None,
     ) -> Tuple[Dict[str, Union[Tensor, FixedCategorical]], Dict[str, Tensor]]:
         """
