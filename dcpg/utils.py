@@ -1,5 +1,6 @@
-import torch.nn as nn
 from typing import Union
+
+import torch.nn as nn
 
 def init(
     module: Union[nn.Linear, nn.Conv2d], 

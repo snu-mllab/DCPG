@@ -1,6 +1,8 @@
 import torch
+from torch import device, Tensor
 
 from baselines.common.vec_env import (
+    VecEnv,
     VecEnvWrapper,
     VecExtractDictObs,
     VecMonitor,
@@ -10,32 +12,8 @@ from gym.spaces.box import Box
 from procgen import ProcgenEnv
 
 
-def make_envs(
-    num_envs,
-    env_name,
-    num_levels,
-    start_level,
-    distribution_mode,
-    normalize_reward,
-    device,
-):
-    envs = ProcgenEnv(
-        num_envs=num_envs,
-        env_name=env_name,
-        num_levels=num_levels,
-        start_level=start_level,
-        distribution_mode=distribution_mode,
-    )
-    envs = VecExtractDictObs(envs, "rgb")
-    envs = VecMonitor(envs, filename=None, keep_buf=100)
-    envs = VecNormalize(envs, ob=False, ret=normalize_reward)
-    envs = VecPyTorchProcgen(envs, device)
-
-    return envs
-
-
 class VecPyTorchProcgen(VecEnvWrapper):
-    def __init__(self, venv, device):
+    def __init__(self, venv: VecEnv, device: device):
         """
         Environment wrapper that returns tensors (for obs and reward)
         """
@@ -56,7 +34,7 @@ class VecPyTorchProcgen(VecEnvWrapper):
         obs = torch.from_numpy(obs).float().to(self.device) / 255.0
         return obs
 
-    def step_async(self, actions):
+    def step_async(self, actions: Tensor):
         if isinstance(actions, torch.LongTensor) or len(actions.shape) > 1:
             # Squeeze the dimension for discrete actions
             actions = actions.squeeze(1)
@@ -81,3 +59,27 @@ class VecPyTorchProcgen(VecEnvWrapper):
             "cliprew": cliprew,
         }
         return norm_infos
+
+
+def make_envs(
+    num_envs: int,
+    env_name: str,
+    num_levels: int,
+    start_level: int,
+    distribution_mode: str,
+    normalize_reward: bool,
+    device: device,
+) -> VecPyTorchProcgen:
+    envs = ProcgenEnv(
+        num_envs=num_envs,
+        env_name=env_name,
+        num_levels=num_levels,
+        start_level=start_level,
+        distribution_mode=distribution_mode,
+    )
+    envs = VecExtractDictObs(envs, "rgb")
+    envs = VecMonitor(envs, filename=None, keep_buf=100)
+    envs = VecNormalize(envs, ob=False, ret=normalize_reward)
+    envs = VecPyTorchProcgen(envs, device)
+
+    return envs

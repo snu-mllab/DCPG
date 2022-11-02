@@ -1,9 +1,20 @@
+from typing import Iterator, Sequence, Tuple
+
 import torch
+from torch import device, Tensor
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+
+from gym.spaces import Space
 
 
 class RolloutStorage(object):
-    def __init__(self, num_steps, num_processes, obs_shape, action_space):
+    def __init__(
+        self,
+        num_steps: int,
+        num_processes: int,
+        obs_shape: Sequence[int],
+        action_space: Space,
+    ):
         self.obs = torch.zeros(num_steps + 1, num_processes, *obs_shape)
         if action_space.__class__.__name__ == "Discrete":
             action_shape = 1
@@ -22,10 +33,10 @@ class RolloutStorage(object):
         self.num_steps = num_steps
         self.step = 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return getattr(self, key)
 
-    def to(self, device):
+    def to(self, device: device):
         self.obs = self.obs.to(device)
         self.actions = self.actions.to(device)
         self.action_log_probs = self.action_log_probs.to(device)
@@ -36,7 +47,14 @@ class RolloutStorage(object):
         self.levels = self.levels.to(device)
 
     def insert(
-        self, obs, actions, action_log_probs, rewards, value_preds, masks, levels
+        self,
+        obs: Tensor,
+        actions: Tensor,
+        action_log_probs: Tensor,
+        rewards,
+        value_preds: Tensor,
+        masks: Tensor,
+        levels: Tensor,
     ):
         self.obs[self.step + 1].copy_(obs)
         self.actions[self.step].copy_(actions)
@@ -53,7 +71,7 @@ class RolloutStorage(object):
         self.masks[0].copy_(self.masks[-1])
         self.levels[0].copy_(self.levels[-1])
 
-    def compute_returns(self, next_value, gamma, gae_lambda):
+    def compute_returns(self, next_value: Tensor, gamma: float, gae_lambda: float):
         self.value_preds[-1] = next_value
         gae = 0
         for step in reversed(range(self.rewards.size(0))):
@@ -67,23 +85,20 @@ class RolloutStorage(object):
 
     def compute_advantages(self):
         self.advantages = self.returns[:-1] - self.value_preds[:-1]
-        self.advantages = (self.advantages - self.advantages.mean()) / (
-            self.advantages.std() + 1e-5
-        )
+        mean = self.advantages.mean()
+        std = self.advantages.std()
+        self.advantages = (self.advantages - mean) / (std + 1e-5)
 
-    def feed_forward_generator(self, num_mini_batch=None, mini_batch_size=None):
+    def feed_forward_generator(
+        self,
+        num_mini_batch: int = None,
+        mini_batch_size: int = None,
+    ) -> Iterator[Tuple[Tensor, ...]]:
         num_steps, num_processes = self.rewards.size()[0:2]
         batch_size = num_processes * num_steps
 
         if mini_batch_size is None:
-            assert batch_size >= num_mini_batch, (
-                "PPO requires the number of processes ({}) "
-                "* number of steps ({}) = {} "
-                "to be greater than or equal to the number of PPO mini batches ({})."
-                "".format(
-                    num_processes, num_steps, num_processes * num_steps, num_mini_batch
-                )
-            )
+            assert batch_size >= num_mini_batch, "[ERROR] num mini batch is too large"
             mini_batch_size = batch_size // num_mini_batch
 
         sampler = BatchSampler(
