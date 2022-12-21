@@ -11,7 +11,7 @@ accepted at NeurIPS 2022.
 To install all required dependencies, please run the following commands in the project root directory.
 
 ```
-conda create —name procgen python=3.8
+conda create —-name procgen python=3.8
 conda activate procgen
 conda install pytorch=1.11.0 cudatoolkit=11.3 -c pytorch
 
