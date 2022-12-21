@@ -13,9 +13,11 @@ To install all required dependencies, please run the following commands in the p
 ```
 conda create —-name procgen python=3.8
 conda activate procgen
+
+pip install numpy==1.23.0
+pip install tensorflow==2.9.0
 conda install pytorch=1.11.0 cudatoolkit=11.3 -c pytorch
 
-pip install tensorflow==2.9.0
 pip install procgen
 pip install pyyaml
 pip install -e .
@@ -29,8 +31,8 @@ If your GPU driver does not support CUDA 11.2 or later, please downgrade CUDA to
 Here are the recommended versions for CUDA 10.2.
 
 ```
-conda install pytorch=1.11.0 cudatoolkit=10.2 -c pytorch
 pip install tensorflow==2.3.0
+conda install pytorch=1.11.0 cudatoolkit=10.2 -c pytorch
 ```
 
 ## Usage
