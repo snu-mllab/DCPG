@@ -19,12 +19,9 @@ To install all required dependencies, please run the following commands in the p
 conda create —-name procgen python=3.8
 conda activate procgen
 
-pip install numpy==1.23.0
-pip install tensorflow==2.9.0
+pip install numpy==1.23.0 tensorflow==2.9.0 procgen pyyaml
 conda install pytorch=1.11.0 cudatoolkit=11.3 -c pytorch
 
-pip install procgen
-pip install pyyaml
 pip install -e .
 
 git clone https://github.com/openai/baselines.git
